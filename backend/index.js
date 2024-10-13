@@ -2,13 +2,12 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
+const axios = require('axios');  // Import axios to call Flask API
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS
 app.use(cors());
 
-// Setup Multer for file uploads
 const storage = multer.diskStorage({
   destination: './uploads',
   filename: function (req, file, cb) {
@@ -17,27 +16,24 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Static folder to serve files (optional)
-app.use(express.static(path.join(__dirname, 'uploads')));
-
-// Upload route to handle the audio file from the front-end
-app.post('/upload', upload.single('audioFile'), (req, res) => {
+app.post('/upload', upload.single('audioFile'), async (req, res) => {
   try {
-    // File info
     const filePath = req.file.path;
-    
-    // You would pass this filePath to the model for processing (mocking it here)
-    console.log(`File uploaded: ${filePath}`);
 
-    // Simulate prediction result (replace with actual model prediction logic)
-    const prediction = {
-      species: "Northern Cardinal",
-      confidence: "92%"
-    };
+    // Send the file to Flask for prediction
+    const formData = new FormData();
+    formData.append('audioFile', req.file);
 
-    // Send the prediction result back to the front-end
+    const predictionResponse = await axios.post('http://localhost:5000/predict', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    const prediction = predictionResponse.data;
+
     res.json({
-      message: "File uploaded and processed successfully.",
+      message: "Prediction successful.",
       prediction
     });
   } catch (error) {
@@ -45,7 +41,6 @@ app.post('/upload', upload.single('audioFile'), (req, res) => {
   }
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
